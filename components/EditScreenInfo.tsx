@@ -1,77 +1,100 @@
-import React from 'react';
-import { StyleSheet } from 'react-native';
-
-import Colors from '../constants/Colors';
-import { ExternalLink } from './ExternalLink';
-import { MonoText } from './StyledText';
-import { Text, View } from './Themed';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, PermissionsAndroid } from 'react-native';
+import { Camera } from 'expo-camera';
+import * as FaceDetector from 'expo-face-detector';
 
 
 export default function EditScreenInfo({ path }: { path: string }) {
-  return (
-    <View>
-      <View style={styles.getStartedContainer}>
-        <Text
-          style={styles.getStartedText}
-          lightColor="rgba(0,0,0,0.8)"
-          darkColor="rgba(255,255,255,0.8)">
-          Open up the code for this screen:
-        </Text>
+  const [propsFaceDetector, setPropsFaceDetector] = useState({});
+    const [type, setType] = useState('front');
 
-        <View
-          style={[styles.codeHighlightContainer, styles.homeScreenFilename]}
-          darkColor="rgba(255,255,255,0.05)"
-          lightColor="rgba(0,0,0,0.05)">
-          <MonoText>{path}</MonoText>
+    useEffect(() => {
+       
+        (async () => {
+            const { status } = await Camera.requestCameraPermissionsAsync();
+            console.log('useEffect status ', status)
+            // setHasPermission(status === 'granted');
+        })();
+
+    }, [type]);
+    const handleFacesDetected = (faces: any) => {
+      // Xử lý kết quả nhận diện khuôn mặt tại đây
+      // console.log(faces);
+    };
+
+    const camera = useRef(null);
+
+    const takePicture = async () => {
+      if (camera.current) {
+        const photo = await (camera.current as any).takePictureAsync();
+        const options = {
+          detectLandmarks: FaceDetector.FaceDetectorLandmarks.all,
+          minDetectionInterval: 0,
+          mode: FaceDetector.FaceDetectorMode.fast,
+          runClassifications: FaceDetector.FaceDetectorClassifications.all,
+          tracking: false
+        }
+        const faces = await FaceDetector.detectFacesAsync(photo.uri, options);
+        console.log("---------------------------")
+        console.log(JSON.stringify(faces).toString())
+      }
+    };
+    return (
+        <View style={{ flex: 1 }}>
+            
+                <View style={styles.container}>
+                    <Camera 
+                      style={styles.camera} 
+                      type={type}
+                      ref={camera}
+                      ratio="1:1"
+                      {...propsFaceDetector}
+                      onCameraReady={() => {
+                        setPropsFaceDetector({
+                          onFacesDetected: handleFacesDetected,
+                          faceDetectorSettings: {
+                            mode: FaceDetector.FaceDetectorMode.fast,
+                            minDetectionInterval: 500,
+                            detectLandmarks: FaceDetector.FaceDetectorLandmarks.none,
+                            runClassifications: FaceDetector.FaceDetectorClassifications.all,
+                            tracking: false,
+                            },
+                          })
+                        }
+                      }
+                      >
+                      <View style={styles.buttonContainer}>
+                      <TouchableOpacity
+                              style={styles.button}
+                              onPressIn={() => {
+                                  setType(
+                                      type == 'back'
+                                          ? 'front'
+                                          : 'back'
+                                  );
+                              }}>
+                              <Text style={styles.text}> Xoay </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                              style={styles.button}
+                              onPressIn={() => {
+                                takePicture()}}>
+                              <Text style={styles.text}> Nhận dạng khuôn mặt </Text>
+                          </TouchableOpacity>
+                      </View>
+                    </Camera>
+                </View>
+                
+           
         </View>
-
-        <Text
-          style={styles.getStartedText}
-          lightColor="rgba(0,0,0,0.8)"
-          darkColor="rgba(255,255,255,0.8)">
-          Change any of the text, save the file, and your app will automatically update.
-        </Text>
-      </View>
-
-      <View style={styles.helpContainer}>
-        <ExternalLink
-          style={styles.helpLink}
-          href="https://docs.expo.io/get-started/create-a-new-app/#opening-the-app-on-your-phonetablet">
-          <Text style={styles.helpLinkText} lightColor={Colors.light.tint}>
-            Tap here if your app doesn't automatically update after making changes
-          </Text>
-        </ExternalLink>
-      </View>
-    </View>
-  );
+    );
 }
 
 const styles = StyleSheet.create({
-  getStartedContainer: {
-    alignItems: 'center',
-    marginHorizontal: 50,
-  },
-  homeScreenFilename: {
-    marginVertical: 7,
-  },
-  codeHighlightContainer: {
-    borderRadius: 3,
-    paddingHorizontal: 4,
-  },
-  getStartedText: {
-    fontSize: 17,
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  helpContainer: {
-    marginTop: 15,
-    marginHorizontal: 20,
-    alignItems: 'center',
-  },
-  helpLink: {
-    paddingVertical: 15,
-  },
-  helpLinkText: {
-    textAlign: 'center',
-  },
+    container: {width:400, height: 400},
+    camera: {width:400, height: 600},
+    buttonContainer: {width:400, height: 600},
+    button: {width:100, height: 100},
+    text: {color: 'white'},
+    text2: {}
 });
